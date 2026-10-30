@@ -4,6 +4,7 @@ COPY . .
 RUN chmod +x gradlew && ./gradlew bootJar --no-daemon
 
 FROM eclipse-temurin:17-jre-alpine
+LABEL org.opencontainers.image.source=https://github.com/thvhdvy/NguyenHuuThanh_JB-IOC-260310_DevOps_SS08_XuatSac02
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
 EXPOSE 8080
