@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branch: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-push-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      
+      - name: Set image name
+        run: |
+          OWNER=$(echo "${{ github.repository_owner}}"| tr '[:upper:]' '[:lower:]')
+          echo "IMAGE=ghcr.io/${OWNER}/delivery-service" >> GITHUN_ENV
+
+      - name: Buidn image 
+        run: docker build -t $IMAGE:${{ github.sha }} -t $IMAGE:latest .
+
+      - name: Login to ghcr
+        uses: docker/Login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Push image
+        run: |
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+      
+      - name: Pull and run container (verify)
+        run: |
+          docker pull $IMAGE:${{ github.sha }}
+          docker run -d --name delivery-service -p 8080:8080 $IMAGE:${{ github.sha }}
+      
+      - name: Verify container
+        run: |
+          sleep 5
+          docker ps
+          curl -f http://localhost:8080/actuator/health
+          docker logs delivery-service
